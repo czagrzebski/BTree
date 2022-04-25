@@ -17,7 +17,13 @@ public class BTree {
         private long address; // the address of the node in the file
         // constructors and other method
 
-        private BTreeNode(int count, int[] keys, long[] children){
+        private BTreeNode(){
+            keys = new int[order];
+            children = new long[order];
+            count = 0;
+        }
+
+        private BTreeNode(int count, int[] keys, long[] children) {
             this.count = count;
             this.keys = keys;
             this.children = children;
@@ -31,30 +37,31 @@ public class BTree {
 
             this.count = f.readInt();
 
-            //Max number of keys = M - 1
-            keys = new int[order - 1];
+            // Max number of keys = M - 1
+            keys = new int[order];
 
-            //Max number of children is M
-            //make room for the next leaf reference (+1)
-            children = new long[order + 1];
+            // Max number of children is M
+            // make room for the next leaf reference (+1)
+            children = new long[order];
 
-            for(int i=0; i < keys.length; i++)
+            for (int i = 0; i < keys.length - 1; i++)
                 keys[i] = f.readInt();
 
-            for(int i=0; i < children.length; i++)
+            for (int i = 0; i < children.length; i++)
                 children[i] = f.readLong();
 
         }
 
-        private void writeNode(long addr) throws IOException{
+        private void writeNode(long addr) throws IOException {
             f.seek(addr);
             f.writeInt(this.count);
 
-            for(int i=0; i < keys.length; i++)
+            for (int i = 0; i < keys.length - 1; i++)
                 f.writeInt(keys[i]);
 
-            for(int i=0; i < children.length; i++)
+            for (int i = 0; i < children.length; i++)
                 f.writeLong(children[i]);
+
         }
     }
 
@@ -66,12 +73,12 @@ public class BTree {
 
         File bFile = new File(filename);
 
-        if(bFile.exists())
+        if (bFile.exists())
             bFile.delete();
 
         f = new RandomAccessFile(bFile, "rw");
 
-        //Start at the beginning of the file
+        // Start at the beginning of the file
         f.seek(0);
 
         // Set the root and free addresses in memory and in the file
@@ -81,12 +88,12 @@ public class BTree {
         this.free = 0;
         f.writeLong(free);
 
-        //Set the blocksize in memory and in the file
+        // Set the blocksize in memory and in the file
         this.blockSize = bsize;
         f.writeInt(blockSize);
 
-        //Calculate the order 
-        this.order = bsize/12;
+        // Calculate the order
+        this.order = bsize / 12;
     }
 
     public BTree(String filename) {
@@ -97,45 +104,83 @@ public class BTree {
         BTreeNode testNode = new BTreeNode(20);
 
         System.out.println(testNode.count);
-        for(int i=0; i < testNode.keys.length; i++){
+        for (int i = 0; i < testNode.keys.length - 1; i++) {
             System.out.println(testNode.keys[i]);
         }
 
-        for(int i=0; i < testNode.children.length; i++){
+        for (int i = 0; i < testNode.children.length; i++) {
             System.out.println(testNode.children[i]);
         }
     }
 
-
-    public Stack<BTreeNode> findPath(long addr, int key) throws IOException{
+    public Stack<BTreeNode> findPath(long addr, int key) throws IOException {
         return findPathRec(addr, new Stack<BTreeNode>(), key);
     }
 
-    private Stack<BTreeNode> findPathRec(long addr, Stack<BTreeNode> path, int key) throws IOException{
-        if(addr == 0)
+    private Stack<BTreeNode> findPathRec(long addr, Stack<BTreeNode> path, int key) throws IOException {
+        if (addr == 0)
             return path;
 
         BTreeNode currNode = new BTreeNode(addr);
 
         path.push(currNode);
 
-        //Leaf found
-        if(currNode.count < 0)
+        // Leaf found
+        if (currNode.count < 0)
             return path;
 
-        for(int i=0; i < Math.abs(currNode.count); i++){
-            if(key < currNode.keys[i]) {
-                 findPathRec(currNode.children[i], path, key);
+        for (int i = 0; i < Math.abs(currNode.count); i++) {
+            if (key < currNode.keys[i]) {
+                findPathRec(currNode.children[i], path, key);
             }
 
-            //End has been reached, so return last child
-            if(i == Math.abs(currNode.count) - 1){
+            // End has been reached, so return last child
+            if (i == Math.abs(currNode.count) - 1) {
                 findPathRec(currNode.children[i + 1], path, key);
             }
         }
-    
 
         return path;
+    }
+
+    private void insertKeyAddressLeaf(BTreeNode currNode, int key, long addr) {
+        for (int i = Math.abs(currNode.count); i > 0; i--) {
+            if (currNode.keys[i - 1] > key) {
+                currNode.keys[i] = currNode.keys[i - 1];
+                currNode.keys[i - 1] = key;
+
+                currNode.children[i] = currNode.children[i - 1];
+                currNode.children[i - 1] = addr;
+            } else {
+                currNode.keys[i] = key;
+                currNode.children[i] = addr;
+                break;
+            }
+
+        }
+
+        currNode.count--;
+    }
+
+    private void insertKeyAddressNonLeaf(BTreeNode node, int key, long addr) {
+        for (int i = (Math.abs(node.count)); i > 0; i--) {
+            if (node.keys[i - 1] > key) {
+                node.keys[i] = node.keys[i - 1];
+                node.children[i + 1] = node.children[i];
+
+                node.keys[i - 1] = key;
+                node.children[i] = addr;
+            } else {
+                node.keys[i] = key;
+                node.children[i + 1] = addr;
+                break;
+            }
+        }
+
+    }
+
+    public boolean hasRoom(BTreeNode node) {
+        return Math.abs(node.count) < (order - 1);
     }
 
     public boolean insert(int key, long addr) throws IOException {
@@ -146,12 +191,14 @@ public class BTree {
          * return false if the key is a duplicate
          */
 
-        int[] keys = new int[order - 1];
-        long[] children = new long[order + 1];
+        long loc = 0;
+        int val = 0;
+        boolean split = false;
 
-        //Root is empty
-        if(root == 0){
-            //Not implemented
+        // Root is empty
+        if (root == 0) {
+            int[] keys = new int[order];
+            long[] children = new long[order];
             long newNodeAddr = malloc();
             keys[0] = key;
             children[0] = addr;
@@ -159,57 +206,90 @@ public class BTree {
             root = newNodeAddr;
             newNode.writeNode(newNodeAddr);
             return true;
-         
         }
-
-        boolean split = false; 
 
         Stack<BTreeNode> path = findPath(root, key);
 
-        //Should be a leaf node
+        // Should be a leaf node
         BTreeNode currNode = path.pop();
 
-        //there is room in the node for a value
-        if(Math.abs(currNode.count) < (order - 1)){
-            for(int i=Math.abs(currNode.count); i > 0; i--){
-                if(currNode.keys[i - 1] > key) {                
-                    currNode.keys[i] = currNode.keys[i - 1];
-                    currNode.keys[i - 1] = key;
-    
-                    currNode.children[i] = currNode.children[i - 1];
-                    currNode.children[i - 1] = addr;
-                } else {
-                    currNode.keys[i] = key;
-                    currNode.children[i] = addr;
-                    break;
-                }
-            } 
-
-            currNode.count -= 1;
+        // there is room in the node for a value
+        if (hasRoom(currNode)) {
+            insertKeyAddressLeaf(currNode, key, addr);
             currNode.writeNode(currNode.address);
             split = false;
         } else {
-            //Splitting a leaf node
+            // Splitting a leaf node
             BTreeNode newNode;
-            int[] splitKeys = new int[order - 1];
-            int[] splitChildren = new int[order + 1];
+            int[] splitKeys = new int[order];
+            long[] splitChildren = new long[order];
 
-            int newSize = (int) Math.ceil(currNode.count / 2);
+            insertKeyAddressLeaf(currNode, key, addr);
+    
+            int oldCount = currNode.count;
 
-            
+            currNode.count = (int) Math.floor((double) currNode.count / 2);
 
-            System.out.println(newSize);
+            int newNodeCount = (oldCount - currNode.count);
+
+            // Index in the new node
+            int j = 0;
+
+            //Copy the values to the new node
+            for (int i = (Math.abs(currNode.count)); i < currNode.keys.length; i++) {
+                splitKeys[j] = currNode.keys[i];
+                splitChildren[j] = currNode.children[i];
+                j++;
+            }
+
+            newNode = new BTreeNode(newNodeCount, splitKeys, splitChildren);
+
+
+            // Val is the smallest value in the new node
+            val = newNode.keys[0];
+
+            loc = malloc();
+
+            // Set the next page reference
+            currNode.children[currNode.children.length - 1] = loc;
+
+            // Write the node to the file
+            currNode.writeNode(currNode.address);
+
+            newNode.writeNode(loc);
+
+            split = true;
         }
+
+      /*   while (!path.empty() && split) {
+            currNode = path.pop();
+            if (hasRoom(currNode)) {
+                insertKeyAddressNonLeaf(currNode, val, loc);
+
+                currNode.writeNode(currNode.address);
+
+                split = false;
+            } else {
+                BTreeNode newNode = new BTreeNode();
+
+                //New value is the middle value of the values in the node
+                int newVal = currNode.keys[Math.abs(currNode.count) / 2];
+
+                
+
+
+            }
+        } */
 
         return true;
     }
 
-    public long malloc() throws IOException{
+    public long malloc() throws IOException {
         long address = 0;
 
         BTreeNode freeNode;
 
-        if(free == 0) {
+        if (free == 0) {
             address = f.length();
         } else {
             freeNode = new BTreeNode(free);

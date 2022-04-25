@@ -14,9 +14,9 @@ public class Test {
 
         tree.insert(9, 2006);
       
-        tree.insert(13, 2008);
+        tree.insert(15, 2008);
 
-        tree.insert(16, 2009);
+        tree.insert(1, 2009);
 
     
 
