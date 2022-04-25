@@ -3,7 +3,7 @@ import java.util.Stack;
 
 public class Test {
     public static void main(String[] args) throws IOException {
-        BTree tree = new BTree("test.bin", 72);
+        BTree tree = new BTree("test.bin", 60);
 
         
         tree.insert(2, 2002);
@@ -16,7 +16,7 @@ public class Test {
       
         tree.insert(15, 2008);
 
-        tree.insert(1, 2009);
+      
 
     
 

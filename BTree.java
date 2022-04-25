@@ -213,6 +213,7 @@ public class BTree {
         // Should be a leaf node
         BTreeNode currNode = path.pop();
 
+        //INSERTING INTO A LEAF
         // there is room in the node for a value
         if (hasRoom(currNode)) {
             insertKeyAddressLeaf(currNode, key, addr);
@@ -224,18 +225,19 @@ public class BTree {
             int[] splitKeys = new int[order];
             long[] splitChildren = new long[order];
 
+            //Insert it in to the array
             insertKeyAddressLeaf(currNode, key, addr);
     
+            //Calculate the new sizes of both arrays
+            //TODO: This is horrible and disgusting code. Refactor it
             int oldCount = currNode.count;
-
             currNode.count = (int) Math.floor((double) currNode.count / 2);
-
             int newNodeCount = (oldCount - currNode.count);
 
             // Index in the new node
             int j = 0;
 
-            //Copy the values to the new node
+            //Copy the values to the new node (split the nodes)
             for (int i = (Math.abs(currNode.count)); i < currNode.keys.length; i++) {
                 splitKeys[j] = currNode.keys[i];
                 splitChildren[j] = currNode.children[i];
@@ -261,13 +263,13 @@ public class BTree {
             split = true;
         }
 
-      /*   while (!path.empty() && split) {
+        // CLEANING UP PARENT NODES
+        // Go through the rest of the search path and handle any BTree property issues
+         while (!path.empty() && split) {
             currNode = path.pop();
             if (hasRoom(currNode)) {
                 insertKeyAddressNonLeaf(currNode, val, loc);
-
                 currNode.writeNode(currNode.address);
-
                 split = false;
             } else {
                 BTreeNode newNode = new BTreeNode();
@@ -275,11 +277,34 @@ public class BTree {
                 //New value is the middle value of the values in the node
                 int newVal = currNode.keys[Math.abs(currNode.count) / 2];
 
+                for(int i=(Math.abs(currNode.count) / 2); i < currNode.keys.length; i++){
+                    newNode.keys[i] = currNode.keys[i];
+                    newNode.children[i + 1] = currNode.children[i];
+                }
                 
 
 
             }
-        } */
+        }
+
+        // The root was split, so create a new root and
+        // "attach" both of the new nodes to this node
+        if(split){
+            BTreeNode newRoot = new BTreeNode();
+
+            // Insert the split node
+            newRoot.keys[0] = val;
+            newRoot.children[1] = loc;
+            newRoot.children[0] = root;
+
+            long newRootAddr = malloc();
+            newRoot.writeNode(newRootAddr);
+            root = newRootAddr;
+            System.out.println();
+            
+        }
+        
+        
 
         return true;
     }
