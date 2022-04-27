@@ -17,9 +17,9 @@ public class BTree {
         private long address; // the address of the node in the file
         // constructors and other method
 
-        private BTreeNode(){
+        private BTreeNode() {
             keys = new int[order];
-            children = new long[order];
+            children = new long[order + 1];
             count = 0;
         }
 
@@ -42,12 +42,12 @@ public class BTree {
 
             // Max number of children is M
             // make room for the next leaf reference (+1)
-            children = new long[order];
+            children = new long[order + 1];
 
             for (int i = 0; i < keys.length - 1; i++)
                 keys[i] = f.readInt();
 
-            for (int i = 0; i < children.length; i++)
+            for (int i = 0; i < children.length - 1; i++)
                 children[i] = f.readLong();
 
         }
@@ -59,7 +59,7 @@ public class BTree {
             for (int i = 0; i < keys.length - 1; i++)
                 f.writeInt(keys[i]);
 
-            for (int i = 0; i < children.length; i++)
+            for (int i = 0; i < children.length - 1; i++)
                 f.writeLong(children[i]);
 
         }
@@ -132,11 +132,12 @@ public class BTree {
         for (int i = 0; i < Math.abs(currNode.count); i++) {
             if (key < currNode.keys[i]) {
                 findPathRec(currNode.children[i], path, key);
+                break;
+                // End has been reached, so return last child
             }
-
-            // End has been reached, so return last child
             if (i == Math.abs(currNode.count) - 1) {
                 findPathRec(currNode.children[i + 1], path, key);
+                break;
             }
         }
 
@@ -177,6 +178,8 @@ public class BTree {
             }
         }
 
+        node.count++;
+
     }
 
     public boolean hasRoom(BTreeNode node) {
@@ -197,12 +200,11 @@ public class BTree {
 
         // Root is empty
         if (root == 0) {
-            int[] keys = new int[order];
-            long[] children = new long[order];
+            BTreeNode newNode = new BTreeNode();
             long newNodeAddr = malloc();
-            keys[0] = key;
-            children[0] = addr;
-            BTreeNode newNode = new BTreeNode(-1, keys, children);
+            newNode.keys[0] = key;
+            newNode.children[0] = addr;
+            newNode.count = -1;
             root = newNodeAddr;
             newNode.writeNode(newNodeAddr);
             return true;
@@ -213,39 +215,39 @@ public class BTree {
         // Should be a leaf node
         BTreeNode currNode = path.pop();
 
-        //INSERTING INTO A LEAF
+        // INSERTING INTO A LEAF
         // there is room in the node for a value
         if (hasRoom(currNode)) {
             insertKeyAddressLeaf(currNode, key, addr);
             currNode.writeNode(currNode.address);
             split = false;
         } else {
-            // Splitting a leaf node
-            BTreeNode newNode;
-            int[] splitKeys = new int[order];
-            long[] splitChildren = new long[order];
+            // New Leaf Node for the split
+            BTreeNode newNode = new BTreeNode();
 
-            //Insert it in to the array
+            // Save Address prior to insertion. (The insertion causes an overflow that
+            // overwrites existing values)
+            newNode.children[newNode.children.length - 2] = currNode.children[currNode.children.length - 2];
+
+            // Insert it in to the array
             insertKeyAddressLeaf(currNode, key, addr);
-    
-            //Calculate the new sizes of both arrays
-            //TODO: This is horrible and disgusting code. Refactor it
-            int oldCount = currNode.count;
-            currNode.count = (int) Math.floor((double) currNode.count / 2);
-            int newNodeCount = (oldCount - currNode.count);
+
+            // Calculate the new sizes of both nodes
+            int newNodeCount = (int) Math.floor((double) currNode.count / 2);
+            currNode.count = (currNode.count - newNodeCount);
 
             // Index in the new node
             int j = 0;
 
-            //Copy the values to the new node (split the nodes)
+            // Copy the values to the new node (split the nodes)
             for (int i = (Math.abs(currNode.count)); i < currNode.keys.length; i++) {
-                splitKeys[j] = currNode.keys[i];
-                splitChildren[j] = currNode.children[i];
+                newNode.keys[j] = currNode.keys[i];
+                newNode.children[j] = currNode.children[i];
                 j++;
             }
 
-            newNode = new BTreeNode(newNodeCount, splitKeys, splitChildren);
-
+            // Set the new count of the new node using formula above
+            newNode.count = newNodeCount;
 
             // Val is the smallest value in the new node
             val = newNode.keys[0];
@@ -253,11 +255,12 @@ public class BTree {
             loc = malloc();
 
             // Set the next page reference
-            currNode.children[currNode.children.length - 1] = loc;
+            currNode.children[currNode.children.length - 2] = loc;
 
             // Write the node to the file
             currNode.writeNode(currNode.address);
 
+            // Write the new node to file
             newNode.writeNode(loc);
 
             split = true;
@@ -265,7 +268,7 @@ public class BTree {
 
         // CLEANING UP PARENT NODES
         // Go through the rest of the search path and handle any BTree property issues
-         while (!path.empty() && split) {
+        while (!path.empty() && split) {
             currNode = path.pop();
             if (hasRoom(currNode)) {
                 insertKeyAddressNonLeaf(currNode, val, loc);
@@ -274,22 +277,46 @@ public class BTree {
             } else {
                 BTreeNode newNode = new BTreeNode();
 
-                //New value is the middle value of the values in the node
-                int newVal = currNode.keys[Math.abs(currNode.count) / 2];
+                insertKeyAddressNonLeaf(currNode, val, loc);
 
-                for(int i=(Math.abs(currNode.count) / 2); i < currNode.keys.length; i++){
-                    newNode.keys[i] = currNode.keys[i];
-                    newNode.children[i + 1] = currNode.children[i];
+                // New value is the middle value of the values in the node
+                int newVal = currNode.keys[currNode.keys.length / 2];
+
+                // Split the node
+                currNode.count--;
+
+                int j = 0;
+                for (int i = (currNode.keys.length / 2) + 1; i < currNode.keys.length; i++) {
+                    newNode.keys[j] = currNode.keys[i];
+
+                    newNode.children[j] = currNode.children[i];
+
+                    newNode.count++; // non-leaf node, so increase count (+)
+                    currNode.count--; // non-leaf node, so decrease count (-)
+
+                    j++;
+
+                    if (i == currNode.keys.length - 1) {
+                        newNode.children[j] = currNode.children[i + 1];
+                    }
                 }
-                
 
+                currNode.writeNode(currNode.address);
+
+                loc = malloc();
+
+                newNode.writeNode(loc);
+
+                val = newVal;
+
+                split = true;
 
             }
         }
 
         // The root was split, so create a new root and
         // "attach" both of the new nodes to this node
-        if(split){
+        if (split) {
             BTreeNode newRoot = new BTreeNode();
 
             // Insert the split node
@@ -297,14 +324,14 @@ public class BTree {
             newRoot.children[1] = loc;
             newRoot.children[0] = root;
 
+            newRoot.count++;
+
             long newRootAddr = malloc();
             newRoot.writeNode(newRootAddr);
             root = newRootAddr;
             System.out.println();
-            
+
         }
-        
-        
 
         return true;
     }
@@ -319,7 +346,7 @@ public class BTree {
         } else {
             freeNode = new BTreeNode(free);
             address = free;
-            free = freeNode.children[freeNode.children.length - 1];
+            free = freeNode.children[freeNode.children.length - 2];
         }
 
         return address;
@@ -336,16 +363,34 @@ public class BTree {
         return 0;
     }
 
-    public long search(int k) {
+    public long search(int k) throws IOException {
         /*
          * This is an equality search
          * If the key is found return the address of the row with the key
          * otherwise return 0
          */
+        return search(root, k);
+    }
+
+    private long search(long addr, int key) throws IOException {
+        if (addr == 0)
+            return 0;
+
+        Stack<BTreeNode> path = findPath(addr, key);
+
+        // If the tree contains the key, it would be in this node
+        BTreeNode currNode = path.pop();
+
+        for (int i = 0; i < Math.abs(currNode.count); i++) {
+            if (currNode.keys[i] == key)
+                return currNode.children[i];
+        }
+
+        // Key was not found
         return 0;
     }
 
-    public LinkedList<Long> rangeSearch(int low, int high) {
+    public LinkedList<Long> rangeSearch(int low, int high) throws IOException {
         // PRE: low <= high
         /*
          * return a list of row addresses for all keys in the range low to high
@@ -353,13 +398,79 @@ public class BTree {
          * return an empty list when no keys are in the range
          */
 
-        return new LinkedList<Long>();
+        LinkedList<Long> addresses = new LinkedList<Long>();
+
+        Stack<BTreeNode> path = findPath(root, low);
+
+        // If the tree contains the key, it would be in this node
+        BTreeNode currNode = path.pop();
+
+        int i = 0;
+
+        while (currNode.keys[i] <= high) {
+            if (currNode.keys[i] >= low) {
+                addresses.add(currNode.children[i]);
+            }
+
+            i++;
+
+            if (i == Math.abs(currNode.count)) {
+                // End of list has been reached
+                if (currNode.children[i] == 0)
+                    break;
+                currNode = new BTreeNode(currNode.children[currNode.children.length - 2]);
+                i = 0;
+            }
+        }
+
+        return addresses;
     }
 
-    public void print() {
+    public void print() throws IOException {
         // print the B+Tree to standard output
         // print one node per line
         // This method can be helpful for debugging
+        LinkedList<Long> q = new LinkedList<Long>();
+        String spacing = "  ";
+
+        // The root only has one node
+        int numNodes = 1;
+
+        q.add(root);
+
+        while (!q.isEmpty()) {
+            BTreeNode currNode = new BTreeNode(q.pop());
+
+            System.out.print("| ");
+            for (int i = 0; i < Math.abs(currNode.count); i++) {
+                System.out.print(currNode.keys[i] + " ");
+
+                if (currNode.count > 0)
+                    q.add(currNode.children[i]);
+
+            }
+
+            numNodes--;
+
+            // Spacing between nodes
+            System.out.print("| ");
+
+            if (currNode.count > 0) {
+                q.add(currNode.children[currNode.count]);
+            }
+
+            if (numNodes == 0 && currNode.count > 0)
+                System.out.println();
+
+            if (numNodes <= 0 && currNode.count > 0) {
+                spacing += "  ";
+                numNodes = currNode.count + 1;
+                System.out.print(spacing);
+            }
+        }
+
+        System.out.println();
+
     }
 
     public void close() {

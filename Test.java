@@ -4,70 +4,41 @@ import java.util.Stack;
 public class Test {
     public static void main(String[] args) throws IOException {
         BTree tree = new BTree("test.bin", 60);
-
-        
-        tree.insert(2, 2002);
-
-        tree.insert(10, 2003);
-
-        tree.insert(13, 2005);
-
-        tree.insert(9, 2006);
-      
-        tree.insert(15, 2008);
-
-      
-
+        //11, 9, 14, 4, 2, 15
     
+      /*   tree.insert(11, 2000);
+        tree.insert(9, 2100);
+        tree.insert(14, 2200);
+        tree.insert(4, 2300);
+        tree.insert(2, 2400); 
+        tree.insert(15, 2600); 
+        tree.insert(21, 2700); 
+        tree.insert(25, 2800); 
+        tree.insert(28, 2900); 
+        tree.insert(32, 3000); 
+        tree.insert(35, 3100); 
+        tree.insert(39, 3200); 
+        tree.insert(44, 3300);   */
 
-        tree.testPrint();
+        for(int i=1; i <= 37; i++){
+            tree.insert(i, i * 1000);
+        }
 
-        
+      /*   tree.insert(1, 1000);
+        tree.insert(2, 2000);
+        tree.insert(3, 3000);
+        tree.insert(4, 4000);
+        tree.insert(5, 5000);
+        tree.insert(6, 6000);
+        tree.insert(7, 7000);
+        tree.insert(8, 8000);
+        tree.insert(9, 9000); */
 
-      /*   int[] sortedArray = new int[5];
-        long[] childArray = new long[6];
 
 
-        sortedArray[0] = 2;
-        sortedArray[1] = 8;
-        sortedArray[2] = 14;
-        sortedArray[3] = 20;
+        //System.out.println(tree.rangeSearch(3, 6));
 
-        childArray[0] = 1000;
-        childArray[1] = 2000;
-        childArray[2] = 3000;
-        childArray[3] = 4000;
-
-        
-        
-        int size = 4;
-
-        int value = 12;
-        long addr = 6000;
-
-        printArray(sortedArray);
-        printChildArray(childArray);
- 
-        for(int i=size; i > 0; i--){
-            if(sortedArray[i - 1] > value) {                
-                sortedArray[i] = sortedArray[i - 1];
-                sortedArray[i - 1] = value;
-
-                childArray[i] = childArray[i - 1];
-                childArray[i - 1] = addr;
-            } else {
-                sortedArray[i] = value;
-                childArray[i] = addr;
-                break;
-            }
-    
-            
-        } 
-
-        System.out.println();
-
-        printArray(sortedArray);
-        printChildArray(childArray); */
+        tree.print();
 
 
     }
