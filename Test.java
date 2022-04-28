@@ -45,6 +45,18 @@ public class Test {
 
         tree.print();
 
+        tree.insert(44, 4400);
+        tree.insert(35, 3700);
+
+        tree.print();
+
+        tree.remove(32);
+        tree.remove(33);
+
+        tree.print();
+
+
+
        
 
     }

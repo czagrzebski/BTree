@@ -18,3 +18,7 @@
       - [ ] Check if it is possible to access the right sibling
         - [ ] If so, check if a value can be removed from it
         - [ ] Remove the value and shift
+
+
+- Notes
+  
