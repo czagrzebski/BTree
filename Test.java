@@ -6,7 +6,7 @@ public class Test {
         BTree tree = new BTree("test.bin", 60);
         //11, 9, 14, 4, 2, 15
     
-      /*   tree.insert(11, 2000);
+        tree.insert(11, 2000);
         tree.insert(9, 2100);
         tree.insert(14, 2200);
         tree.insert(4, 2300);
@@ -18,11 +18,10 @@ public class Test {
         tree.insert(32, 3000); 
         tree.insert(35, 3100); 
         tree.insert(39, 3200); 
-        tree.insert(44, 3300);   */
+        tree.insert(44, 3300);
+        tree.insert(33, 3300);      
 
-        for(int i=1; i <= 37; i++){
-            tree.insert(i, i * 1000);
-        }
+      
 
       /*   tree.insert(1, 1000);
         tree.insert(2, 2000);
@@ -40,6 +39,13 @@ public class Test {
 
         tree.print();
 
+        tree.remove(44);
+
+        tree.remove(35);
+
+        tree.print();
+
+       
 
     }
 

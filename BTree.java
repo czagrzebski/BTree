@@ -61,7 +61,6 @@ public class BTree {
 
             for (int i = 0; i < children.length - 1; i++)
                 f.writeLong(children[i]);
-
         }
     }
 
@@ -96,8 +95,19 @@ public class BTree {
         this.order = bsize / 12;
     }
 
-    public BTree(String filename) {
+    public BTree(String filename) throws IOException {
         // open an existing B+Tree
+        File bFile = new File(filename);
+        f = new RandomAccessFile(bFile, "rw");
+
+        f.seek(0);
+
+        this.root = f.readLong();
+        this.free = f.readLong();
+        this.blockSize = f.readInt();
+
+        // Calculate the order
+        this.order = blockSize / 12;
     }
 
     public void testPrint() throws IOException {
@@ -353,14 +363,121 @@ public class BTree {
 
     }
 
-    public long remove(int key) {
+    public long remove(int key) throws IOException {
         /*
          * If the key is in the Btree, remove the key and return the address of the
          * row
          * return 0 if the key is not found in the B+tree
          */
 
+        Stack<BTreeNode> path = findPath(root, key);
+        boolean tooSmall = false;
+
+        // Remove from a sorted array
+
+        BTreeNode currNode = path.pop();
+
+        // Search for the key. If it is found, remove it.
+        // Else, return 0 (not found)
+        for(int i=0; i < Math.abs(currNode.count); i++){
+            if(currNode.keys[i] == key){
+                int j = i + 1;
+                while(j < Math.abs(currNode.count)){
+                    currNode.keys[j - 1] = currNode.keys[j];
+                    currNode.children[j - 1] = currNode.children[j];
+                    j++;
+                }
+                currNode.count++; //Leaf, so this removes 1 from the size
+                currNode.writeNode(currNode.address);
+
+                System.out.println(currNode.count);
+
+                System.out.println(Math.ceil( (double) order / 2) - 1);
+
+                // Too Small
+                if(Math.abs(currNode.count) < Math.ceil( (double) order / 2) - 1){
+                    tooSmall = true;
+                }
+
+                break;
+            } else if(i == Math.abs(currNode.count) - 1) {
+                return 0;
+            }
+        }
+
+        while(!path.isEmpty() && tooSmall){
+            BTreeNode child = currNode; //save the currNode
+            currNode = path.pop(); // get the parent node so we can do operations here
+
+            // Find the index where the child is stored (always a non-leaf)
+            int childIndex = -1;
+            for(int i=0; i < currNode.count + 1; i++){
+                if(currNode.children[i] == child.address){
+                    childIndex = i;
+                    break;
+                } 
+            }
+
+            // Check Neighbors of Child
+            BTreeNode neighbor;
+
+            boolean foundNeighbor = false;
+
+            // Check to see if I can remove from the left neighbor
+            // Check if it is a valid index and that it has enough children
+            if(childIndex - 1 >= 0){
+                neighbor = new BTreeNode(currNode.children[childIndex - 1]);
+
+                //Borrowing is possible
+                if(Math.abs(neighbor.count) - 1 >= Math.ceil(order / 2) - 1){
+                    borrow(neighbor, child);
+                    tooSmall = false;
+
+                    currNode.keys[childIndex - 1] = child.keys[0];
+
+                    currNode.writeNode(currNode.address);
+                }
+            } 
+
+            // Check left neighbor
+            // IMPLEMENT HERE
+
+
+            //IF IT IS STILL TOO SMALL, then I NEED TO COMBINE
+
+            if(tooSmall){
+                //COMBINE HERE
+            }
+
+    
+        }
+
+
         return 0;
+    }
+
+    public void borrow(BTreeNode neighbor, BTreeNode child) throws IOException{
+        int key = 0;
+        long addr = 0;
+
+        // Leaf Node, else its a non-leaf
+        if(child.count < 0){
+            key = neighbor.keys[Math.abs(neighbor.count) - 1];
+            addr = neighbor.children[Math.abs(neighbor.count) - 1];
+            neighbor.count++;
+
+            insertKeyAddressLeaf(child, key, addr);
+        } else {
+            key = neighbor.keys[neighbor.count - 1];
+            addr = neighbor.children[neighbor.count];
+            neighbor.count--;
+
+            insertKeyAddressNonLeaf(child, key, addr);
+        }
+
+        neighbor.writeNode(neighbor.address);
+        child.writeNode(child.address);
+
     }
 
     public long search(int k) throws IOException {
@@ -408,18 +525,21 @@ public class BTree {
         int i = 0;
 
         while (currNode.keys[i] <= high) {
-            if (currNode.keys[i] >= low) {
+            //Key is within range
+            if (currNode.keys[i] >= low) 
                 addresses.add(currNode.children[i]);
-            }
-
+            
             i++;
 
+            // End of list has been reached, so add the last child 
+            // to the LinkedList
             if (i == Math.abs(currNode.count)) {
-                // End of list has been reached
                 if (currNode.children[i] == 0)
                     break;
+
+                // Go to the next leaf
                 currNode = new BTreeNode(currNode.children[currNode.children.length - 2]);
-                i = 0;
+                i = 0; // reset index
             }
         }
 
@@ -434,46 +554,65 @@ public class BTree {
         String spacing = "  ";
 
         // The root only has one node
-        int numNodes = 1;
+        int currNumNodes = 1;
+        int level = 0;
+        int nextNumberNodes = 0;
+
+        System.out.println("\n==========BTree==========");
 
         q.add(root);
 
+        System.out.print(level + ": ");
         while (!q.isEmpty()) {
             BTreeNode currNode = new BTreeNode(q.pop());
 
-            System.out.print("| ");
+            System.out.print("[ ");
             for (int i = 0; i < Math.abs(currNode.count); i++) {
                 System.out.print(currNode.keys[i] + " ");
 
-                if (currNode.count > 0)
+                if (currNode.count > 0) {
                     q.add(currNode.children[i]);
+                    nextNumberNodes++;
+                }
 
             }
 
-            numNodes--;
+            currNumNodes--;
 
             // Spacing between nodes
-            System.out.print("| ");
+            System.out.print("] ");
 
             if (currNode.count > 0) {
                 q.add(currNode.children[currNode.count]);
+                nextNumberNodes++;
             }
 
-            if (numNodes == 0 && currNode.count > 0)
+            if (currNode.count < 0 && currNode.children[currNode.children.length - 2] != 0) {
+                System.out.print("-> ");
+            }
+
+            if (currNumNodes == 0 && currNode.count > 0)
                 System.out.println();
 
-            if (numNodes <= 0 && currNode.count > 0) {
+            if (currNumNodes <= 0 && currNode.count > 0) {
+                level++;
                 spacing += "  ";
-                numNodes = currNode.count + 1;
-                System.out.print(spacing);
+                currNumNodes = nextNumberNodes;
+                nextNumberNodes = 0;
+                System.out.print(level + ":" + spacing);
             }
         }
 
-        System.out.println();
+        System.out.println("\n=========================");
 
     }
 
-    public void close() {
+    public void close() throws IOException {
         // close the B+tree. The tree should not be accessed after close is called
+        f.seek(0);
+        f.writeLong(this.root);
+        f.writeLong( this.free);
+
+        f.close();
     }
 }

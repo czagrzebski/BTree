@@ -5,4 +5,16 @@
 ## DB 
 - Create a new file
     - [ ] Open the file
-    - [ ] 
+
+
+## BTree
+- Remove
+  - [x] Remove the key from the node (if it exists)
+  - [ ] Borrowing
+    - [ ] Check if borrowing is possible from either neighbor
+      - [ ] Check if it is possible to access the left sibling
+        - [ ] If so, check if a value can be removed from it
+        - [ ] Remove the value and shift 
+      - [ ] Check if it is possible to access the right sibling
+        - [ ] If so, check if a value can be removed from it
+        - [ ] Remove the value and shift

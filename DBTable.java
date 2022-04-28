@@ -122,5 +122,7 @@ public class DBTable {
 
     public void close() {
         // close the DBTable. The table should not be used after it is closed
+
+        
     }
 }

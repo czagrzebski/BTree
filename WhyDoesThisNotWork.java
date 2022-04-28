@@ -1,38 +1,24 @@
 public class WhyDoesThisNotWork {
     public static void main(String[] args) {
-        int[] keys = new int[4];
+        int[] sortedNumbers = {2, 3, 4, 5, 6};
+        int key = 5;    
 
-        int[] children = new int[6];
+        printArray(sortedNumbers);
 
-        int key = 9;
-        int addr = 75;
-
-        keys[0] = 5;
-        keys[1] = 8;
-        keys[2] = 12;
-        
-        children[0] = 10;
-        children[1] = 20;
-        children[2] = 30;
-        children[3] = 40;
-
-
-        for(int i=(3); i > 0; i--){
-            if(keys[i - 1] > key){
-                keys[i] = keys[i - 1];
-                children[i + 1] = children[i];
-
-                keys[i - 1] = key;
-                children[i] = addr;
-            } else {
-                keys[i] = key;
-                children[i + 1] = addr;
+        for(int i=0; i < sortedNumbers.length; i++){
+            if(sortedNumbers[i] == key){
+                int j = i + 1;
+                while(j < sortedNumbers.length){
+                    sortedNumbers[j - 1] = sortedNumbers[j];
+                    j++;
+                }
                 break;
+            } else if(i == sortedNumbers.length - 1) {
+                System.out.println("Not found");
             }
         }
 
-        printArray(keys);
-        printArray(children);
+        printArray(sortedNumbers);
     }
 
     public static void printArray(int[] array){
