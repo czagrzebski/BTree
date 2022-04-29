@@ -21,4 +21,7 @@
 
 
 - Notes
-  
+  - Combine
+    - Check if you combine right first (Pull child's right into itself)
+    - Then check if you can combine right (Pull child into child's left neighbor)
+    - Change References

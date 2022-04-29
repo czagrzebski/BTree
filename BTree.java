@@ -466,6 +466,26 @@ public class BTree {
                 // Check if the number of keys in the node is >= the minimum of keys required
                 // If true, then the node is not too small
                 // If false, then the node is too small
+
+                // Borrow from right
+                if(childIndex < currNode.count){
+                    neighbor = new BTreeNode(currNode.children[childIndex + 1]);
+                    combine(child, neighbor);
+
+                    child.children[child.children.length - 2] = neighbor.children[neighbor.children.length - 2];
+
+                    child.writeNode(child.address);
+
+
+                } else {
+                    neighbor = new BTreeNode(currNode.children[childIndex - 1]);
+                    combine(neighbor, child);
+
+                    neighbor.children[neighbor.children.length - 2] = child.children[child.children.length - 2];
+
+                    neighbor.writeNode(neighbor.address);
+                    
+                }
             }
 
     
@@ -502,6 +522,7 @@ public class BTree {
             neighbor.count++;
 
             insertKeyLeaf(child, key, addr);
+            
 
         } else {
             key = neighbor.keys[borrowIndex];
@@ -516,20 +537,20 @@ public class BTree {
 
     }
 
-    public void combine(BTreeNode neighbor, BTreeNode child){
-        int key;
-        long addr;
-
-        if(child.count < 0){
-            for(int i=0; i < Math.abs(neighbor.count); i++){
-                insertKeyLeaf(child, neighbor.keys[i], neighbor.children[i]);
+    // Swaps two nodes
+    public void combine(BTreeNode to, BTreeNode from) throws IOException {
+        if(from.count < 0){
+            for(int i=0; i < Math.abs(from.count); i++){
+                insertKeyLeaf(to, from.keys[i], from.children[i]);
             }
 
-            neighbor.count = 0;
-            
-            //free(neighbor);
-            
+            from.count = 0;
+        
         }
+
+        to.writeNode(to.address);
+        from.writeNode(from.address);
+
     }
 
     public long search(int k) throws IOException {
@@ -550,6 +571,7 @@ public class BTree {
         // If the tree contains the key, it would be in this node
         BTreeNode currNode = path.pop();
 
+        // Search the keys in the node for a match
         for (int i = 0; i < Math.abs(currNode.count); i++) {
             if (currNode.keys[i] == key)
                 return currNode.children[i];
@@ -647,10 +669,10 @@ public class BTree {
                 System.out.println();
 
             if (currNumNodes <= 0 && currNode.count > 0) {
-                level++;
                 spacing += "  ";
                 currNumNodes = nextNumberNodes;
                 nextNumberNodes = 0;
+                level++;
                 System.out.print(level + ":" + spacing);
             }
         }
