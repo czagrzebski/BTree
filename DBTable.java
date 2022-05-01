@@ -3,6 +3,7 @@ import java.util.LinkedList;
 
 public class DBTable {
     private RandomAccessFile rows; // the file that stores the rows in the table
+    private BTree index;
     private long free; // head of the free list space for rows
     private int numOtherFields;
     private int otherFieldLengths[];
@@ -20,6 +21,10 @@ public class DBTable {
          * of x characters always uses space for x characters.
          */
         // Constructors and other Row methods
+
+        private void writeNode(){
+            
+        }
     }
 
     public DBTable(String filename, int fL[], int bsize) throws IOException{
@@ -36,6 +41,7 @@ public class DBTable {
          */
 
         File dbFile = new File(filename);
+        index = new BTree(filename + ".tree", bsize);
 
         //Delete the file if it already exists
         if(dbFile.exists())

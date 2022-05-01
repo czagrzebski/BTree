@@ -58,7 +58,7 @@ public class Test {
 
         //7, 14, 21, 25, 29, 34, 3, 2, 1
 
-        tree.insert(7, 1000);
+      /*   tree.insert(7, 1000);
         tree.insert(14, 2000);
         tree.insert(21, 3000);
         tree.insert(25, 4000);
@@ -69,22 +69,74 @@ public class Test {
         tree.insert(1, 9000);
 
 
-        tree.print();
 
+        //1, 
 
-        tree.remove(3);
+        tree.remove(21);
 
-        tree.print();
-
-        tree.remove(7);
+        tree.remove(14);
 
         tree.remove(25);
+
+    
+  tree.print();
+        tree.remove(7);
+
+       // tree.print();
+
+        
+       tree.print();
 
         tree.remove(29);
 
         tree.print();
 
+      //  tree.print();
 
+        tree.remove(3);
+
+        tree.print(); */
+
+
+
+        int nums[] = {9, 5, 1, 13, 17, 2, 6, 7, 8, 3, 4, 10, 18, 11, 12, 14, 19, 15, 16, 20};
+
+        /* for(int i=0; i < nums.length; i++){
+            tree.insert(nums[i], nums[i] * 1000);
+        } */
+/* 
+        tree.insert(22, 22000);
+
+        tree.remove(17);
+
+        tree.print();
+
+        tree.remove(16);
+
+
+        tree.remove(18);
+
+        tree.print();
+
+        tree.remove(19); */
+
+        for(int i=1; i <= 19; i++){
+            tree.insert(i, i*1000);
+        }
+
+        tree.remove(19);
+
+        tree.remove(17);
+
+        tree.print();
+
+        tree.remove(5);
+
+       // tree.remove(9);
+
+       
+
+        tree.print();
         //Remove 3, 7, 25, 29, 2
        
 
