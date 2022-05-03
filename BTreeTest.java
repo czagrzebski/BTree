@@ -84,29 +84,15 @@ public class BTreeTest {
         for ( i = 0; i < len; i++) {
             sFields[0] = Arrays.copyOf((new Integer(nums[i])).toString().toCharArray(), 10);
             sFields[1] = Arrays.copyOf((new Integer(nums[i])).toString().toCharArray(), 15);
-            
+
             t3.insert(nums[i], sFields);
         }
         
         System.out.println("Past inserts in test 3");
-
-     
         
         for (i = len-1; i > 4; i--) {
-            System.out.println("Removing: " + nums[i]);
-           
             t3.remove(nums[i]);
-           
-             
-            
-          
-            System.out.println(nums[i] + ": " + t3.rangeSearch(1, 1));
-            
         }
-
-        t3.printBTree();
-
-        System.out.println(t3.rangeSearch(1, 1));
         System.out.println("Print after removes in test 3");
         t3.print();
 
@@ -200,7 +186,7 @@ public class BTreeTest {
         int sFieldLens[] = {15, 15, 20, 30};
         DBTable t6 = new DBTable("t6"+s, sFieldLens, blockSize);
         char sFields[][] = new char[4][];
-        for ( i = 0; i < 499; i++) {
+        for ( i = 0; i < 2000; i++) {
             sFields[0] = Arrays.copyOf((new Integer(nums[i])).toString().toCharArray(), 15);
             sFields[1] = Arrays.copyOf((new Integer(nums[i])).toString().toCharArray(), 15);
             sFields[2] = Arrays.copyOf((new Integer(nums[i])).toString().toCharArray(), 20);
@@ -209,38 +195,11 @@ public class BTreeTest {
             t6.insert(nums[i], sFields);
         }
         System.out.println("Test 6"+s+" after inserts");
-        int numRemoved = 0;
-
-        t6.printBTree();
-        for ( i = 0; i < 499; i++) {
-            if(nums[i] == 23000){
-             //   System.out.println(i + ": uh oh");
-            }
-
-            
-
-            if(i == 382){
-                   t6.printBTree();
-
-                boolean result = t6.remove(nums[i]);
-
-                numRemoved++;
-               // System.out.println(numRemoved);
-                
-             
-            } else {
-                t6.remove(nums[i]);
-                numRemoved++;
-
-            }
-            
-            
+        for ( i = 0; i < 2000; i++) {
+            t6.remove(nums[i]);
         }
-
-       t6.printBTree();
-        
         System.out.println("Test 6"+s+" after removes");
-        for ( i = 50; i >= 0; i--) {
+        for ( i = 1999; i >= 0; i--) {
             sFields[0] = Arrays.copyOf((new Integer(nums[i])).toString().toCharArray(), 15);
             sFields[1] = Arrays.copyOf((new Integer(nums[i])).toString().toCharArray(), 15);
             sFields[2] = Arrays.copyOf((new Integer(nums[i])).toString().toCharArray(), 20);
@@ -248,20 +207,13 @@ public class BTreeTest {
             
             t6.insert(nums[i], sFields);
         }
-
-
-
         System.out.println("Test 6"+s+" after second inserts");
-        for ( i = 50; i > 11; i--) {
+        for ( i = 1999; i > 11; i--) {
             t6.remove(nums[i]);
         }
-
-
-
         System.out.println("Test 6"+s+" after second removes");
         t6.close();
         t6 = new DBTable("t6"+s);
-        //t6.printBTree();
         t6.print();
         t6.close();
 
@@ -269,7 +221,7 @@ public class BTreeTest {
  
     public static void main(String args[]) throws IOException {
         BTreeTest test = new BTreeTest();
-      /*   test.test1();
+        test.test1();
         test.test2();
         test.test3();
         
@@ -283,16 +235,16 @@ public class BTreeTest {
         for (j = 0; j < max/2; j++) {
             nums[2*j] = nums1[j];
             nums[2*j+1] = nums1[j + max/2];
-        } */
+        }
 
 
-      //  test.test4("a", nums, 72, max);
-       // test.test4("b", nums, 132, max);
-        //test.test5("a", nums, 72);
-        //test.test5("b", nums, 132);
+    /*     test.test4("a", nums, 72, max);
+        test.test4("b", nums, 132, max);
+        test.test5("a", nums, 72);
+        test.test5("b", nums, 132); */
         
-        //test.test6("a", 132);
-        test.test6("b", 144); 
+        test.test6("a", 132);
+        test.test6("b", 144);
     }
 
 }

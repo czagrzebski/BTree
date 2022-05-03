@@ -253,9 +253,26 @@ public class DBTable {
         // One row per line
         LinkedList<LinkedList<String>> data = this.rangeSearch(Integer.MIN_VALUE, Integer.MAX_VALUE);
 
+        // Print the table header
+          System.out.format("%-8s", "Key");
+          for (int i = 0; i < numOtherFields; i++) {
+              System.out.format(" %-" + (otherFieldLengths[i]) + "s ", "Field " + (i + 1));
+          }
+
+
+        System.out.println();
         for(LinkedList<String> row:data){
-            System.out.println(row);
+              // Print out each field and calculate the padding automatically
+            System.out.format("%-8s", row.pop());
+            for (int i = 0; i < numOtherFields; i++) {
+                System.out.format(" %-" + (otherFieldLengths[i]) + "s ", row.pop());
+            }
+            System.out.println();
         }
+    }
+
+    public void free(){
+        
     }
 
     public void close() throws IOException {

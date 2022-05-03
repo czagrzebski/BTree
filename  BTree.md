@@ -28,15 +28,21 @@
 
 
 - Testing BTree Removal
-  - Borrow Right (from leaf)
-  - Borrow Left (from leaf)
-  - Combine Right (from leaf)
-  - Combine Left (from left)
+  - [x] Borrow Right (from leaf)
+  - [x] Borrow Left (from leaf)
+  - [x] Combine Right (from leaf)
+  - [x] Combine Left (from left)
   
-  - Borrow Right (from non-leaf)
-  - Borrow Left (from non-leaf)
-  - Combine Right (from non-leaf)
-  - Combine Left (from non-leaf)
+  - [x] Borrow Right (from non-leaf)
+  - [x] Borrow Left (from non-leaf)
+  - [x] Combine Right (from non-leaf)
+  - [x] Combine Left (from non-leaf)
+
+- Questions for Gendreau
+  - How do I know how many keys to borrow?
+  - Free List for DB Table Row
+  - Test
+  - Ask About Special Case with Borrow from Non Leaf
 
 
 - Test Free List for BTree
