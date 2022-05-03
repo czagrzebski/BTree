@@ -25,3 +25,18 @@
     - Check if you combine right first (Pull child's right into itself)
     - Then check if you can combine right (Pull child into child's left neighbor)
     - Change References
+
+
+- Testing BTree Removal
+  - Borrow Right (from leaf)
+  - Borrow Left (from leaf)
+  - Combine Right (from leaf)
+  - Combine Left (from left)
+  
+  - Borrow Right (from non-leaf)
+  - Borrow Left (from non-leaf)
+  - Combine Right (from non-leaf)
+  - Combine Left (from non-leaf)
+
+
+- Test Free List for BTree

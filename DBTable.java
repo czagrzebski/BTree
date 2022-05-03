@@ -22,9 +22,44 @@ public class DBTable {
          */
         // Constructors and other Row methods
 
-        private void writeNode(){
+        private Row(){
             
         }
+
+        private Row(int key, char[][] otherFields){
+            this.keyField = key;
+            this.otherFields = otherFields;
+        }
+
+        private Row(long addr) throws IOException {
+            rows.seek(addr);
+
+            this.keyField = rows.readInt();
+
+            otherFields = new char[numOtherFields][];
+
+            for(int i=0; i < otherFields.length; i++){
+                otherFields[i] = new char[otherFieldLengths[i]];
+                for(int j=0; j < otherFields[i].length; j++){
+                    otherFields[i][j] = rows.readChar();
+                }
+            }
+
+        }
+
+        private void writeNode(long addr) throws IOException {
+            rows.seek(addr);
+
+            rows.writeInt(this.keyField);
+
+            for(int i=0; i < otherFields.length; i++){
+                for(int j=0; j < otherFields[i].length; j++){
+                    rows.writeChar(otherFields[i][j]);
+                }
+            }
+
+        }
+
     }
 
     public DBTable(String filename, int fL[], int bsize) throws IOException{
@@ -55,8 +90,11 @@ public class DBTable {
         this.numOtherFields = fL.length;
         rows.writeInt(numOtherFields);
 
-        for(int i=0; i < fL.length; i++)
+        otherFieldLengths = new int[fL.length];
+        for(int i=0; i < fL.length; i++) {
+            otherFieldLengths[i] = fL[i];
             rows.writeInt(fL[i]);
+        }
 
         this.free = 0;
         rows.writeLong(0);
@@ -65,11 +103,26 @@ public class DBTable {
 
     }
 
-    public DBTable(String filename) {
+    public DBTable(String filename) throws IOException {
         // Use this constructor to open an existing DBTable
+        File dbFile = new File(filename);
+        index = new BTree(filename + ".tree");
+
+        rows = new RandomAccessFile(dbFile, "rw");
+
+        rows.seek(0);
+
+        this.numOtherFields = rows.readInt();
+
+        this.otherFieldLengths = new int[this.numOtherFields];
+        for(int i=0; i < numOtherFields; i++){
+            this.otherFieldLengths[i] = rows.readInt();
+        }
+
+        this.free = rows.readLong();
     }
 
-    public boolean insert(int key, char fields[][]) {
+    public boolean insert(int key, char fields[][]) throws IOException {
         // PRE: the length of each row is fields matches the expected length
         /*
          * If a row with the key is not in the table, the row is added and the method
@@ -78,10 +131,42 @@ public class DBTable {
          * If the row is added the key is also added into the B+tree.
          */
 
-         return true;
+         // It does not already exist
+         if(index.search(key) == 0){
+            Row newRow = new Row(key, fields);
+            long newRowAddr = malloc();
+            newRow.writeNode(newRowAddr);
+            index.insert(key, newRowAddr);
+            return true;
+         } 
+
+      
+         // Key already exists in the table
+         return false;
     }
 
-    public boolean remove(int key) {
+    public void printBTree() throws IOException {
+        index.print();
+    }
+
+    public long malloc() throws IOException {
+        long address = 0;
+
+        Row freeNode;
+
+        if (free == 0) {
+            address = rows.length();
+        } else {
+            freeNode = new Row(free);
+            address = free;
+            free = freeNode.keyField;
+        }
+
+        return address;
+
+    }
+
+    public boolean remove(int key) throws IOException {
         /*
          * If a row with the key is in the table it is removed and true is returned
          * otherwise false is returned.
@@ -90,10 +175,13 @@ public class DBTable {
          * If the row is deleted the key must be deleted from the B+Tree
          */
 
-         return true;
+         if(index.remove(key) == 0)
+            return false;
+        
+        return true;
     }
 
-    public LinkedList<String> search(int key) {
+    public LinkedList<String> search(int key) throws IOException {
     /*
      * If a row with the key is found in the table return a list of the other fields
      * in
@@ -104,10 +192,27 @@ public class DBTable {
      */
         LinkedList<String> toReturn = new LinkedList<>();
 
+        long dbAddress = index.search(key);
+
+        if(dbAddress == 0)
+            return toReturn;
+
+        Row row = new Row(dbAddress);
+
+        for(int i=0; i < row.otherFields.length; i++){
+            String field = "";
+            for(int j=0; j < row.otherFields[i].length; j++){
+                if(row.otherFields[i][j] != 0)
+                    field += row.otherFields[i][j];
+            }
+            toReturn.add(field);
+        }
+
+
         return toReturn;
     }
 
-    public LinkedList<LinkedList<String>> rangeSearch(int low, int high) {
+    public LinkedList<LinkedList<String>> rangeSearch(int low, int high) throws IOException {
         // PRE: low <= high
         /*
          * For each row with a key that is in the range low to high inclusive a list
@@ -118,17 +223,52 @@ public class DBTable {
          */
         LinkedList<LinkedList<String>> toReturn = new LinkedList<>();
 
+        LinkedList<Long> addressesInRange = index.rangeSearch(low, high);
+
+        for(long address: addressesInRange){
+            Row row = new Row(address);
+            LinkedList<String> rowData = new LinkedList<>();
+            rowData.add(String.valueOf(row.keyField));
+            for(int i=0; i < row.otherFields.length; i++){
+                String field = "";
+                for(int j=0; j < row.otherFields[i].length; j++){
+                    if(row.otherFields[i][j] != 0)
+                        field += row.otherFields[i][j];
+                }
+                rowData.add(field);
+            }
+
+            toReturn.add(rowData);
+        }
+
         return toReturn;
     }
 
-    public void print() {
-        // Print the rows to standard output is ascending order (based on the keys)
-        // One row per line
+    public void printFreeBTree() throws IOException {
+        index.printFreeList();
     }
 
-    public void close() {
-        // close the DBTable. The table should not be used after it is closed
+    public void print() throws IOException {
+        // Print the rows to standard output is ascending order (based on the keys)
+        // One row per line
+        LinkedList<LinkedList<String>> data = this.rangeSearch(Integer.MIN_VALUE, Integer.MAX_VALUE);
 
+        for(LinkedList<String> row:data){
+            System.out.println(row);
+        }
+    }
+
+    public void close() throws IOException {
+        // close the DBTable. The table should not be used after it is closed
+        rows.seek(0);
+        rows.writeInt(numOtherFields);
+        for(int i=0; i < otherFieldLengths.length; i++){
+            rows.writeInt(otherFieldLengths[i]);
+        }
+
+        rows.writeLong(this.free);
+
+        index.close();
         
     }
 }

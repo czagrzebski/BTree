@@ -66,10 +66,19 @@ public class BTree {
         /**
          * Returns true if the node has the minimum
          * number of keys required to satisfy BTree Properties
+         * 
          * @return
          */
-        private boolean minKeys(){
-            return Math.abs(this.count) >= Math.ceil((double) order / 2) - 1 || this.address == root && this.count >= 1;
+        private boolean minKeys() {
+            return Math.abs(this.count) >= Math.ceil((double) order / 2) - 1 || this.address == root && Math.abs(this.count) >= 1;
+        }
+
+        private boolean contains(int key) {
+            for(int i=0; i < Math.abs(this.count); i++)
+                if(this.keys[i] == key)
+                    return true;
+
+            return false;
         }
     }
 
@@ -140,6 +149,7 @@ public class BTree {
         if (addr == 0)
             return path;
 
+    
         BTreeNode currNode = new BTreeNode(addr);
 
         path.push(currNode);
@@ -205,6 +215,32 @@ public class BTree {
         return Math.abs(node.count) < (order - 1);
     }
 
+    /**
+     * Ensures that the values in non-leaf nodes satisfy
+     * B+ Tree Properties
+     */
+    public void checkValues(BTreeNode node) throws IOException {
+        if (node.count > 0) {
+            for (int i = 0; i < node.count; i++) {
+                BTreeNode childOfChild = new BTreeNode(node.children[i + 1]);
+                if (childOfChild.count > 0) {
+                    node.keys[i] = getLeftMostValue(childOfChild);
+                } else {
+                    break;
+                }
+            }
+            node.writeNode(node.address);
+        }
+    }
+
+    public int getLeftMostValue(BTreeNode node) throws IOException {
+        if (node.count < 0) {
+            return node.keys[0];
+        } else {
+            return getLeftMostValue(new BTreeNode(node.children[0]));
+        }
+    }
+
     public boolean insert(int key, long addr) throws IOException {
         /*
          * If key is not a duplicate add key to the B+tree
@@ -233,6 +269,9 @@ public class BTree {
 
         // Should be a leaf node
         BTreeNode currNode = path.pop();
+
+        if(currNode.contains(key))
+            return false;
 
         // INSERTING INTO A LEAF
         // there is room in the node for a value
@@ -365,7 +404,7 @@ public class BTree {
         } else {
             freeNode = new BTreeNode(free);
             address = free;
-            free = freeNode.children[freeNode.children.length - 2];
+            free = freeNode.children[0];
         }
 
         return address;
@@ -393,16 +432,27 @@ public class BTree {
 
         Stack<BTreeNode> path = findPath(root, key);
         boolean tooSmall = false;
+        long toReturn = 0;
 
         // Remove from a sorted array
 
         BTreeNode currNode = path.pop();
+
+
+        if(currNode.count == -1 && currNode.keys[0] == key && currNode.address == this.root){
+            toReturn = currNode.children[0];
+            free(currNode.address);
+            this.root = 0;
+            return toReturn;
+            
+        }
 
         // Search for the key. If it is found, remove it.a
         // Else, return 0 (not found)
         for (int i = 0; i < Math.abs(currNode.count); i++) {
             if (currNode.keys[i] == key) {
                 int j = i + 1;
+                toReturn = currNode.children[i];
                 while (j < Math.abs(currNode.count)) {
                     currNode.keys[j - 1] = currNode.keys[j];
                     currNode.children[j - 1] = currNode.children[j];
@@ -412,13 +462,13 @@ public class BTree {
                 currNode.writeNode(currNode.address);
 
                 // Too Small
-                if (Math.abs(currNode.count) < Math.ceil((double) order / 2) - 1) {
+                if (!currNode.minKeys()) {
                     tooSmall = true;
                 }
                 break;
 
             } else if (i == Math.abs(currNode.count) - 1) {
-                return 0;
+                return toReturn;
             }
         }
 
@@ -446,40 +496,52 @@ public class BTree {
                     break;
                 }
             }
+            
+
+
+         
 
             // Check Neighbors of Child
             BTreeNode neighbor;
-
-            // Check to see if I can remove from the left neighbor
-            // Check if it is a valid index and that it has enough children
-            // This is all non-leaf logic
-            // Borrow differentiates between leaf and non-leaf
-            // I apologize for this horrible sections of code
+            
+           
+            // Borrow from left
             if (childIndex - 1 >= 0) {
                 neighbor = new BTreeNode(currNode.children[childIndex - 1]);
 
                 // Borrowing is possible
                 if (Math.abs(neighbor.count) - 1 >= Math.ceil((double) order / 2) - 1) {
+
                     borrow(neighbor, child, Math.abs(neighbor.count) - 1);
                     tooSmall = false;
 
-                    currNode.keys[childIndex - 1] = child.keys[0];
+                    if (neighbor.count < 0)
+                        currNode.keys[childIndex - 1] = child.keys[0];
+                    else
+                        currNode.keys[childIndex - 1] = getLeftMostValue(new BTreeNode(child.children[0]));
+                        //currNode.keys[childIndex - 1] = new BTreeNode(child.children[0]).keys[0];
 
                     currNode.writeNode(currNode.address);
+                    
                 }
             }
 
-            // Check Right neighbor
-            // IMPLEMENT HERE
+            // Borrow from right
             if (childIndex < currNode.count && tooSmall) {
                 neighbor = new BTreeNode(currNode.children[childIndex + 1]);
 
                 // Borrowing is possible
                 if (Math.abs(neighbor.count) - 1 >= Math.ceil((double) order / 2) - 1) {
+
                     borrow(neighbor, child, 0);
                     tooSmall = false;
 
-                    currNode.keys[childIndex] = neighbor.keys[0];
+                    // Adjust the parent key involved in combining (if needed)
+                    if (neighbor.count < 0)
+                        currNode.keys[childIndex] = neighbor.keys[0];
+                    else {
+                        currNode.keys[childIndex] = getLeftMostValue(new BTreeNode(child.children[child.count]));
+                    }
 
                     currNode.writeNode(currNode.address);
                 }
@@ -507,51 +569,82 @@ public class BTree {
                     neighbor = new BTreeNode(currNode.children[childIndex - 1]);
                     combine(neighbor, child);
 
-                    if(child.count < 0)
+                    if (neighbor.count < 0)
                         neighbor.children[neighbor.children.length - 2] = child.children[child.children.length - 2];
 
                     neighbor.writeNode(neighbor.address);
 
+                    free(child.address);
+
                     // Remove the key shared between the two nodes
                     removeFromNonLeaf(currNode, currNode.keys[childIndex - 1]);
 
-                    //free here
+
+                    checkValues(neighbor);
+
+                    // free here
 
                 } else {
                     neighbor = new BTreeNode(currNode.children[childIndex + 1]);
                     combine(child, neighbor);
 
-                    if(child.count < 0)
+                    if (child.count < 0)
                         child.children[child.children.length - 2] = neighbor.children[neighbor.children.length - 2];
 
                     child.writeNode(child.address);
 
+                    free(neighbor.address);
+
                     // Remove the key shared between the two nodes
                     removeFromNonLeaf(currNode, currNode.keys[childIndex]);
-                
-                    //free here
+
+
+
+                     checkValues(child);
+                    // free here
                 }
-                
+
                 currNode.writeNode(currNode.address);
 
                 if (currNode.minKeys()) {
                     tooSmall = false;
                 }
 
-               
             }
 
+            checkValues(child);
+
+        }
 
 
+        // Check the values of the remaining nodes
+        // The key's value should be its child's leftmost key
+        // Assuming the child is not a leaf
+        while (!path.isEmpty()) {
+            BTreeNode node = path.pop();
+            checkValues(node);
+
+            
+            if(node.address == 4052){
+            System.out.println();
+            System.out.print(key + ": ");
+            for(int i=0; i < Math.abs(node.count); i++){
+                System.out.print(node.keys[i] + ", ");
+            }
+            System.out.println();
+        }
         }
 
         // Then the root is too empty (root needs between 1 and M-1 keys)
-        if(tooSmall) {
+        if (tooSmall) {
+            long oldRoot = this.root;
             this.root = new BTreeNode(this.root).children[0];
-            //free here
+      
+             free(oldRoot);
+            // free here
         }
 
-        return 0;
+        return toReturn;
     }
 
     /**
@@ -584,16 +677,67 @@ public class BTree {
             insertKeyLeaf(child, key, addr);
 
         } else {
-            key = neighbor.keys[borrowIndex];
-            addr = neighbor.children[borrowIndex + 1];
-            neighbor.count--;
 
-            insertKeyNonLeaf(child, key, addr);
+            // Borrowing from a right non leaf
+            if (borrowIndex == 0) {
+                addr = neighbor.children[borrowIndex];
+
+                neighbor.count--;
+
+                // Shift keys and children
+                for (int i = 1; i <= neighbor.count; i++) {
+                    neighbor.keys[i - 1] = neighbor.keys[i];
+
+                }
+
+                for (int i = 1; i <= neighbor.count + 1; i++) {
+                    neighbor.children[i - 1] = neighbor.children[i];
+                }
+
+                insertKeyNonLeaf(child, getLeftMostValue(new BTreeNode(addr)), addr);
+
+                // Borrowing from a left non leaf
+            } else {
+                key = neighbor.keys[borrowIndex];
+                addr = neighbor.children[borrowIndex + 1];
+
+                removeFromNonLeaf(neighbor, key);
+
+                for (int i = child.count; i > 0; i--) {
+                    child.keys[i] = child.keys[i - 1];
+                }
+
+                for (int i = child.count; i >= 0; i--) {
+                    child.children[i + 1] = child.children[i];
+                }
+
+                child.children[0] = addr;
+                child.keys[0] = new BTreeNode(child.children[1]).keys[0];
+                child.count++;
+            }
+
         }
 
         neighbor.writeNode(neighbor.address);
         child.writeNode(child.address);
 
+    }
+
+    public void printFreeList() throws IOException {
+        System.out.println();
+        printFreeListRec(this.free);
+        System.out.println();
+    }
+
+    private void printFreeListRec(long addr) throws IOException {
+        if(addr == 0){
+            return;
+        } else {
+            BTreeNode node = new BTreeNode(addr);
+            System.out.print(node.address + ", ");
+            printFreeListRec(node.children[0]);
+
+        }
     }
 
     // Swaps two nodes
@@ -602,19 +746,18 @@ public class BTree {
             for (int i = 0; i < Math.abs(from.count); i++) {
                 insertKeyLeaf(to, from.keys[i], from.children[i]);
             }
-
             from.count = 0;
-
         } else {
             BTreeNode fromLeftChild = new BTreeNode(from.children[0]);
             to.children[to.count + 1] = from.children[0];
-            to.keys[to.count] = fromLeftChild.keys[0];
+            to.keys[to.count] = getLeftMostValue(fromLeftChild);
             to.count++;
             int j = to.count;
             for (int i = 0; i < Math.abs(from.count); i++) {
                 to.keys[j] = from.keys[i];
                 to.children[j + 1] = from.children[i + 1];
                 to.count++;
+                j++;
             }
 
             from.count = 0;
@@ -641,6 +784,15 @@ public class BTree {
             }
         }
 
+    }
+
+    private void free(long addr) throws IOException {
+        BTreeNode toFree = new BTreeNode(addr);
+        toFree.children[0] = free;
+        toFree.count = 0;
+        free = addr;
+
+        toFree.writeNode(addr);
     }
 
     public long search(int k) throws IOException {
@@ -695,10 +847,14 @@ public class BTree {
 
             i++;
 
+            if(i == 11){
+                System.out.println("STOP");
+            }
+
             // End of list has been reached, so add the last child
             // to the LinkedList
             if (i == Math.abs(currNode.count)) {
-                if (currNode.children[i] == 0)
+                if (currNode.children[currNode.children.length - 2] == 0)
                     break;
 
                 // Go to the next leaf
@@ -710,6 +866,9 @@ public class BTree {
         return addresses;
     }
 
+    public void printCount(long addr) throws IOException {
+        System.out.println((new BTreeNode(addr)).count);
+    }
 
     public void print() throws IOException {
         // print the B+Tree to standard output
