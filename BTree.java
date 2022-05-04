@@ -8,6 +8,7 @@ public class BTree {
     private int blockSize;
     private long root;
     private long free;
+    private LinkedList<Long> freeList;
 
     // add instance variables as needed.
     private class BTreeNode {
@@ -94,6 +95,8 @@ public class BTree {
         if (bFile.exists())
             bFile.delete();
 
+        freeList = new LinkedList<>();
+
         f = new RandomAccessFile(bFile, "rw");
 
         // Start at the beginning of the file
@@ -124,6 +127,8 @@ public class BTree {
         this.root = f.readLong();
         this.free = f.readLong();
         this.blockSize = f.readInt();
+
+        freeList = new LinkedList<>();
 
         // Calculate the order
         this.order = blockSize / 12;
@@ -402,8 +407,10 @@ public class BTree {
         if (free == 0) {
             address = f.length();
         } else {
+            
             freeNode = new BTreeNode(free);
             address = free;
+            freeList.remove(address);
             free = freeNode.children[0];
         }
 
@@ -447,6 +454,7 @@ public class BTree {
 
         for (int i = 0; i < Math.abs(currNode.count); i++) {
             if (currNode.keys[i] == key) {
+                returnAddr = currNode.children[i];
                 int j = i + 1;
                 while (j < Math.abs(currNode.count)) {
                     currNode.keys[j - 1] = currNode.keys[j];
@@ -622,18 +630,14 @@ public class BTree {
 
         }
 
-        while(!path.isEmpty()){
-            BTreeNode node = path.pop();
-            //checkValues(node);
-        }
-
         // Then the root is too empty (root needs between 1 and M-1 keys)
         if (tooSmall) {
             long oldRoot = this.root;
             this.root = new BTreeNode(this.root).children[0];
 
+            // free the old root
             free(oldRoot);
-            // free here
+            
         }
 
         return returnAddr;
@@ -678,7 +682,7 @@ public class BTree {
             // Borrow the rightmost key/child from a node
             long borrowAddr = from.children[borrowIndex + 1];
 
-            // Shift the keys over
+            // Shift values right in "to" to make room
             for (int i = to.count; i > 0; i--) {
                 to.keys[i] = to.keys[i - 1];
             }
@@ -759,6 +763,13 @@ public class BTree {
     }
 
     private void free(long addr) throws IOException {
+        if(this.freeList.contains(addr)){
+            System.out.println("Already Added to free list: " + addr);
+            System.out.println(freeList.peekLast());
+        } else {
+            freeList.add(addr);
+        }
+
         BTreeNode toFree = new BTreeNode(addr);
         toFree.children[0] = free;
         free = addr;

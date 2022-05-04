@@ -152,19 +152,19 @@ public class DBTable {
     public long malloc() throws IOException {
         long address = 0;
 
-        Row freeNode;
-
         if (free == 0) {
             address = rows.length();
         } else {
-            freeNode = new Row(free);
             address = free;
-            free = freeNode.keyField;
+            rows.seek(address);
+            free = rows.readLong();
         }
 
         return address;
 
     }
+
+       
 
     public boolean remove(int key) throws IOException {
         /*
@@ -175,9 +175,11 @@ public class DBTable {
          * If the row is deleted the key must be deleted from the B+Tree
          */
 
-         if(index.remove(key) == 0)
+         long addrRemoved = index.remove(key);
+         if(addrRemoved == 0)
             return false;
         
+        free(addrRemoved);
         return true;
     }
 
@@ -271,8 +273,38 @@ public class DBTable {
         }
     }
 
-    public void free(){
+   
+    /**
+     * Adds a node to the free list
+     * 
+     * @param addr Address of the node
+     * @throws IOException
+     */
+    private void free(long addr) throws IOException {
+        rows.seek(addr);
+        rows.writeLong(free);
         
+        free = addr;
+    }
+
+    public void printFreeList() throws IOException {
+        System.out.println("DB Free List: ");
+        printFreeListRec(free);
+        System.out.println();
+    }
+
+
+    private void printFreeListRec(long addr) throws IOException {
+        long node;
+        if (addr == 0) {
+            return;
+        } else {
+            rows.seek(addr);
+
+            System.out.print(addr + ", ");
+            printFreeListRec(rows.readLong());
+
+        }
     }
 
     public void close() throws IOException {

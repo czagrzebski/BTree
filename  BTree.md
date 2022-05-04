@@ -39,10 +39,7 @@
   - [x] Combine Left (from non-leaf)
 
 - Questions for Gendreau
-  - How do I know how many keys to borrow?
-  - Free List for DB Table Row
-  - Test
-  - Ask About Special Case with Borrow from Non Leaf
+
 
 
 - Test Free List for BTree

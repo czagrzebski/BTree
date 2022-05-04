@@ -40,6 +40,8 @@ public class AdditionalTesting {
 
 
      b.print();
+
+     System.out.println("remove 13");
       
      b.remove(13);
      
