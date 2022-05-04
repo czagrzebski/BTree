@@ -97,6 +97,13 @@ public class BTree {
 
             return false;
         }
+
+        /**
+         * Returns true if the node has enough room to insert a key
+         */
+        private boolean hasRoom() {
+            return Math.abs(this.count) < (order - 1);
+        }
     }
 
     public BTree(String filename, int bsize) throws IOException {
@@ -239,9 +246,7 @@ public class BTree {
 
     }
 
-    public boolean hasRoom(BTreeNode node) {
-        return Math.abs(node.count) < (order - 1);
-    }
+   
 
     /**
      * Returns the left most value
@@ -295,7 +300,7 @@ public class BTree {
 
         // INSERTING INTO A LEAF
         // there is room in the node for a value
-        if (hasRoom(currNode)) {
+        if (currNode.hasRoom()) {
             insertKeyLeaf(currNode, key, addr);
             currNode.writeNode(currNode.address);
             split = false;
@@ -348,7 +353,7 @@ public class BTree {
         // Go through the rest of the search path and handle any BTree property issues
         while (!path.empty() && split) {
             currNode = path.pop();
-            if (hasRoom(currNode)) {
+            if (currNode.hasRoom()) {
                 insertKeyNonLeaf(currNode, val, loc);
                 currNode.writeNode(currNode.address);
                 split = false;
@@ -450,7 +455,6 @@ public class BTree {
                 return i;
             }
         }
-
         return -1;
     }
 

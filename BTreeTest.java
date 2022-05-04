@@ -211,12 +211,6 @@ public class BTreeTest {
         for ( i = 1999; i > 11; i--) {
             t6.remove(nums[i]);
         }
-
-        System.out.println();
-        for(i=0; i <= 11; i++){
-            System.out.print(nums[i] + ", ");
-        }
-        System.out.println();
         System.out.println("Test 6"+s+" after second removes");
         t6.close();
         t6 = new DBTable("t6"+s);
