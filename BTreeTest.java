@@ -204,21 +204,19 @@ public class BTreeTest {
             sFields[1] = Arrays.copyOf((new Integer(nums[i])).toString().toCharArray(), 15);
             sFields[2] = Arrays.copyOf((new Integer(nums[i])).toString().toCharArray(), 20);
             sFields[3] = Arrays.copyOf((new Integer(nums[i])).toString().toCharArray(), 30);
-            if(nums[i] == 92510){
-                System.out.println("Adding 92510");
-            }
-            if(t6.insert(nums[i], sFields) == false) {
-                System.out.println("Failed to insert: " + nums[i]);
-            }   
+            
+            t6.insert(nums[i], sFields);
         }
         System.out.println("Test 6"+s+" after second inserts");
         for ( i = 1999; i > 11; i--) {
-            if(t6.remove(nums[i]) == false){
-                System.out.println("Failed to remove: " + nums[i]);
-            }
-           
-                
+            t6.remove(nums[i]);
         }
+
+        System.out.println();
+        for(i=0; i <= 11; i++){
+            System.out.print(nums[i] + ", ");
+        }
+        System.out.println();
         System.out.println("Test 6"+s+" after second removes");
         t6.close();
         t6 = new DBTable("t6"+s);
@@ -251,7 +249,7 @@ public class BTreeTest {
         test.test5("a", nums, 72);
         test.test5("b", nums, 132);
         
-        //test.test6("a", 132);
+        test.test6("a", 132);
         test.test6("b", 144);
     }
 

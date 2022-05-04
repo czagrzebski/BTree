@@ -2,15 +2,15 @@ import java.io.*;
 
 public class AdditionalTesting {
   public static void main(String[] args) throws IOException {
-      BTree b = new BTree("testing.tree", 60);
+      BTree b = new BTree("testing.tree", 72);
       
-      for(int i=7; i <= 20; i++){
+      /* for(int i=7; i <= 20; i++){
         b.insert(i, i * 1000);
       }
 
       b.insert(5, 5000);
       b.insert(4, 4000);
-      b.insert(3, 3000);
+      b.insert(3, 3000); */
 
       
 
@@ -38,16 +38,38 @@ public class AdditionalTesting {
       b.remove(18);
       b.remove(17); */
 
-
+/* 
      b.print();
 
      System.out.println("remove 13");
       
      b.remove(13);
      
-     b.print();
+     b.print(); */
 
-    
-     // b.printCount(20);
+     for(int i=1; i <= 499; i++){
+       b.insert(i, i * 1000);
+     }
+
+
+     for(int i=1; i <= 499; i++){
+        b.remove(i);
+    }
+
+
+
+    b.print();
+
+    for(int i=1; i <= 200; i++){
+      b.insert(i, i * 1000);
+    }
+
+    b.printFreeList();
+
+    b.close();
+
+    b = new BTree("testing.tree");
+
+    b.printFreeList();
   }  
 }

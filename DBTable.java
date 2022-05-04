@@ -1,3 +1,11 @@
+/**
+ * DBTable (Project 4)
+ * 
+ * A database table implemented use a B+ Tree and a RandomAccessFile
+ * 
+ * @author Creed Zagrzebski (zagrzebski1516@uwlax.edu)
+ */
+
 import java.io.*;
 import java.util.LinkedList;
 
@@ -22,10 +30,6 @@ public class DBTable {
          */
         // Constructors and other Row methods
 
-        private Row(){
-            
-        }
-
         private Row(int key, char[][] otherFields){
             this.keyField = key;
             this.otherFields = otherFields;
@@ -34,8 +38,10 @@ public class DBTable {
         private Row(long addr) throws IOException {
             rows.seek(addr);
 
+            // Get the key of the row
             this.keyField = rows.readInt();
 
+            //Read the fields into the node
             otherFields = new char[numOtherFields][];
 
             for(int i=0; i < otherFields.length; i++){
@@ -48,6 +54,7 @@ public class DBTable {
         }
 
         private void writeNode(long addr) throws IOException {
+            // Dump the node into the RAF
             rows.seek(addr);
 
             rows.writeInt(this.keyField);
@@ -85,11 +92,14 @@ public class DBTable {
         rows = new RandomAccessFile(dbFile, "rw");
 
         //Start at the beginning of the file
+        // Setup the DB Table file
         rows.seek(0);
 
+        // Write the number of other fields
         this.numOtherFields = fL.length;
         rows.writeInt(numOtherFields);
 
+        // Write out the lengths of each field
         otherFieldLengths = new int[fL.length];
         for(int i=0; i < fL.length; i++) {
             otherFieldLengths[i] = fL[i];
@@ -98,9 +108,6 @@ public class DBTable {
 
         this.free = 0;
         rows.writeLong(0);
-        
-
-
     }
 
     public DBTable(String filename) throws IOException {
@@ -112,6 +119,7 @@ public class DBTable {
 
         rows.seek(0);
 
+        // Read in the number of other fields, and field lengths from the file
         this.numOtherFields = rows.readInt();
 
         this.otherFieldLengths = new int[this.numOtherFields];
@@ -119,6 +127,7 @@ public class DBTable {
             this.otherFieldLengths[i] = rows.readInt();
         }
 
+        // Get the address of the free list from the file
         this.free = rows.readLong();
     }
 
@@ -134,21 +143,28 @@ public class DBTable {
          // It does not already exist
          if(index.search(key) == 0){
             Row newRow = new Row(key, fields);
-            long newRowAddr = malloc();
+            long newRowAddr = malloc(); // allocate space for the new node
             newRow.writeNode(newRowAddr);
-            index.insert(key, newRowAddr);
+            index.insert(key, newRowAddr); // insert key/address into BTree
             return true;
          } 
-
-      
          // Key already exists in the table
          return false;
     }
 
+    /**
+     * Prints out the BTree (for debugging)
+     * @throws IOException
+     */
     public void printBTree() throws IOException {
         index.print();
     }
 
+    /**
+     * Allocates space for the new node
+     * @return The address of the new node
+     * @throws IOException
+     */
     public long malloc() throws IOException {
         long address = 0;
 
@@ -164,8 +180,6 @@ public class DBTable {
 
     }
 
-       
-
     public boolean remove(int key) throws IOException {
         /*
          * If a row with the key is in the table it is removed and true is returned
@@ -176,6 +190,8 @@ public class DBTable {
          */
 
          long addrRemoved = index.remove(key);
+
+         // The addresses/key wasn't found. Thus, it was not removed from the tree
          if(addrRemoved == 0)
             return false;
         
@@ -194,6 +210,7 @@ public class DBTable {
      */
         LinkedList<String> toReturn = new LinkedList<>();
 
+        // Find the address in the database of the key
         long dbAddress = index.search(key);
 
         if(dbAddress == 0)
@@ -201,6 +218,7 @@ public class DBTable {
 
         Row row = new Row(dbAddress);
 
+        // Convert the character fields into strings and add them to the free list
         for(int i=0; i < row.otherFields.length; i++){
             String field = "";
             for(int j=0; j < row.otherFields[i].length; j++){
@@ -225,12 +243,17 @@ public class DBTable {
          */
         LinkedList<LinkedList<String>> toReturn = new LinkedList<>();
 
+        // Get a list of DB addresses within the range from the BTree
         LinkedList<Long> addressesInRange = index.rangeSearch(low, high);
 
+        // For each address found, open the row and add its fields to the a LinkedList.
+        // Then add that linkedlist to another linkedlist that will be returned.
         for(long address: addressesInRange){
             Row row = new Row(address);
             LinkedList<String> rowData = new LinkedList<>();
             rowData.add(String.valueOf(row.keyField));
+
+            //Convert character fields to strings
             for(int i=0; i < row.otherFields.length; i++){
                 String field = "";
                 for(int j=0; j < row.otherFields[i].length; j++){
@@ -246,10 +269,17 @@ public class DBTable {
         return toReturn;
     }
 
+    /**
+     * Prints the free list of the BTree (for debugging)
+     */
     public void printFreeBTree() throws IOException {
         index.printFreeList();
     }
 
+    /**
+     * Prints the rows to standard output in ascending order 
+     * @throws IOException
+     */
     public void print() throws IOException {
         // Print the rows to standard output is ascending order (based on the keys)
         // One row per line
@@ -287,6 +317,10 @@ public class DBTable {
         free = addr;
     }
 
+    /**
+     * Prints the free list of the DB Table
+     * @throws IOException
+     */
     public void printFreeList() throws IOException {
         System.out.println("DB Free List: ");
         printFreeListRec(free);
@@ -318,6 +352,7 @@ public class DBTable {
         rows.writeLong(this.free);
 
         index.close();
+        rows.close();
         
     }
 }
