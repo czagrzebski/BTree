@@ -246,23 +246,6 @@ public class BTree {
 
     }
 
-   
-
-    /**
-     * Returns the left most value
-     * 
-     * @param node
-     * @return leftmost value
-     * @throws IOException
-     */
-    public int getLeftMostValue(BTreeNode node) throws IOException {
-        if (node.count < 0) {
-            return node.keys[0];
-        } else {
-            return getLeftMostValue(new BTreeNode(node.children[0]));
-        }
-    }
-
     /**
      * Inserts a key and address into the BTree.
      * Does not allow duplicates
@@ -369,6 +352,8 @@ public class BTree {
                 currNode.count--;
 
                 int j = 0;
+
+                // Split the node and copy the values into the new node
                 for (int i = (currNode.keys.length / 2) + 1; i < currNode.keys.length; i++) {
                     newNode.keys[j] = currNode.keys[i];
 
@@ -471,6 +456,10 @@ public class BTree {
         long returnAddr = 0;
 
         Stack<BTreeNode> path = findPath(root, key);
+
+        // The tree is empty
+        if(path.isEmpty())
+            return returnAddr;
 
         BTreeNode currNode = path.pop();
 
@@ -782,6 +771,21 @@ public class BTree {
     }
 
     /**
+     * Returns the left most value
+     * 
+     * @param node
+     * @return leftmost value
+     * @throws IOException
+     */
+    public int getLeftMostValue(BTreeNode node) throws IOException {
+        if (node.count < 0) {
+            return node.keys[0];
+        } else {
+            return getLeftMostValue(new BTreeNode(node.children[0]));
+        }
+    }
+
+    /**
      * Removes a key from a non leaf
      * 
      * @param node
@@ -895,7 +899,7 @@ public class BTree {
 
         Stack<BTreeNode> path = findPath(root, low);
 
-        if (path.size() == 0)
+        if (path.isEmpty())
             return addresses;
 
         // If the tree contains the key, it would be in this node
